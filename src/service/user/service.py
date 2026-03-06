@@ -1,40 +1,12 @@
 from contextlib import asynccontextmanager
-from dataclasses import dataclass
 from datetime import datetime
 
 import aiosqlite
-from pydantic import BaseModel, Field, ConfigDict, field_validator
+
+from .schemas import User
 
 
-class User(BaseModel):
-    model_config = ConfigDict(from_attributes=True, extra="ignore")
-
-    id: int
-    full_name: str
-    phone: str | None = None
-    prompts: list[str]
-    start_number: int
-    dice_numbers: list[int]
-    remaining_rolls: int
-    has_finished: bool
-    is_frozen: bool
-    frozen_until: datetime
-    created_at: datetime
-
-    @field_validator("prompts", mode="before")
-    def parse_prompts(cls, value: str) -> list[str]:
-        if not value:
-            return []
-        return value.split('~')
-
-    @field_validator("dice_numbers", mode="before")
-    def parse_dice_numbers(cls, value: str) -> list[int]:
-        if not value:
-            return []
-        return [int(i) for i in value.split(',')]
-
-
-class UserStorageService:
+class Service:
 
     def __init__(self, db_path: str = "database.sqlite3"):
         self.db_path = db_path
@@ -52,8 +24,7 @@ class UserStorageService:
                 CREATE TABLE IF NOT EXISTS users (
                     id INTEGER PRIMARY KEY,
                     full_name TEXT NOT NULL,
-                    phone TEXT DEFAULT NULL,
-                    prompts TEXT NOT NULL DEFAULT '',
+                    prompt TEXT NOT NULL DEFAULT '',
                     start_number INTEGER DEFAULT 0,
                     dice_numbers TEXT DEFAULT '',
                     remaining_rolls INTEGER DEFAULT 5,
@@ -109,10 +80,9 @@ class UserStorageService:
         resp = await self.update(user_id, {"start_number": number})
         return bool(resp)
 
-    async def add_prompt(self, user_id: int, text: str):
+    async def set_prompt(self, user_id: int, text: str):
         if row := await self.get(user_id):
-            row.prompts.append(text)
-            resp = await self.update(user_id, {"prompts": '~'.join(row.prompts)})
+            resp = await self.update(user_id, {"prompt": text})
             return bool(resp)
         return None
 
