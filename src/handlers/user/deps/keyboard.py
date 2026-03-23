@@ -9,9 +9,24 @@ from .board import Cell
 class Keyboard:
 
     @staticmethod
+    def hi():
+        channel_url = f"https://t.me/{config.target_chat}"
+        return InlineKeyboardMarkup(
+            inline_keyboard=[
+                [Button(text="Преветственное видео", url=f"{channel_url}/11")],
+                [Button(text="Канал Проводника", url=channel_url)],
+            ]
+        )
+    @staticmethod
     def lets_go():
         return InlineKeyboardMarkup(
             inline_keyboard=[[Button(text="Начать", callback_data="~lets_go")]]
+        )
+
+    @staticmethod
+    def input_prompt():
+        return InlineKeyboardMarkup(
+            inline_keyboard=[[Button(text="Начать", callback_data="~input_prompt")]]
         )
 
     @staticmethod

@@ -2,10 +2,8 @@ from aiogram import F, Router
 from aiogram.filters import Command
 from aiogram.types import Message
 
+from src.service.user import User, UserService
 from src.config import config
-from src.service.user import User, UserStorageService
-
-UserService = UserStorageService()
 
 
 async def cmd_users(message: Message):

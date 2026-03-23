@@ -6,20 +6,16 @@ import aiocron
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums.parse_mode import ParseMode
-from aiogram.types import FSInputFile
 
-from src.config import IMAGES, config
+from src.config import config
 from src.handlers import link
 from src.handlers.user.deps import Keyboard as UserK
 from src.handlers.user.deps import calculate_cell
-from src.service.user import User, UserStorageService
+from src.service.user import UserService
 from src.utils.middleware import FirewallMiddleware
 from src.utils.tools import load_env
 
-UserService = UserStorageService()
-
 logger = logging.getLogger(__name__)
-
 
 async def main():
     await UserService.init_db()
@@ -27,34 +23,44 @@ async def main():
     bot = Bot(token=config.token,
               default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 
-    @aiocron.crontab('*/1 * * * *')
+    @aiocron.crontab("*/1 * * * *")
     async def job_1():
         users = await UserService.get_frozen_users()
         if users:
             unlocked_count = 0
             for user in users:
-                if user.is_frozen and user.frozen_until < datetime.now() + timedelta(seconds=1):
-                    is_ok = await UserService.unlock_user(user.id)
-                    await UserService.add_more_rolls(user.id)
+                if user.is_frozen and user.frozen_until < datetime.now() + timedelta(
+                    seconds=1
+                ):
                     unlocked_count += 1
-                    logger.info(f"Unfreez user #{user.id} - {user.full_name}. Ok: {is_ok}")
-
-                    cell, six_count = calculate_cell(user.start_number, user.dice_numbers)
+                    is_ok = await UserService.reset_game_params(user.id)
+                    notified = "yes"
                     for _ in (1, 2, 3):
                         try:
-                            await bot.send_message(chat_id=user.id,
-                                                   text="Вы можете продолжить свой путь",
-                                                   reply_markup=UserK.dice_kb(cell, six_count))
+                            await bot.send_message(
+                                user.id,
+                                "Сообщение по поводу повторного прохождения игры",
+                                reply_markup=UserK.input_prompt(),
+                            )
                         except Exception as e:
-                            logger.error(f"Notify #{user.id} failed. Retry after 0.15 sec\n{type(e).__name__}: {e}")
+                            logger.error(
+                                f"Notify #{user.id} failed. Retry after 0.15 sec\n{type(e).__name__}: {e}"
+                            )
                             await asyncio.sleep(0.15)
                         else:
                             break
                     else:
-                        logger.error(f"Not notified user #{user.id}")
+                        logger.error(f"Notify user #{user.id} failed")
+                        notified = "no"
 
-            logger.info(f"Still locked {len(users) - unlocked_count}-users. "
-                        f"Freed: {unlocked_count}")
+                    logger.info(
+                        f"Reset user:{user.id} game {'success' if is_ok else 'failed'}. Notified: {notified}"
+                    )
+
+            logger.info(
+                f"Still locked {len(users) - unlocked_count}-users. "
+                f"Freed: {unlocked_count}"
+            )
 
     dp = Dispatcher()
 

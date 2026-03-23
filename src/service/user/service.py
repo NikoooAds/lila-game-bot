@@ -1,5 +1,6 @@
+import random
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import aiosqlite
 
@@ -30,7 +31,6 @@ class Service:
                     remaining_rolls INTEGER DEFAULT 5,
                     is_frozen BOOLEAN DEFAULT false,
                     frozen_until TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    has_finished BOOLEAN DEFAULT false,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             ''')
@@ -100,16 +100,17 @@ class Service:
             return bool(resp)
         return False
 
-    async def lock_user(self, user_id: int, until_date: datetime):
+    async def lock_user(self, user_id: int, until_date: datetime | None = None):
+        if not until_date:
+            until_date = (
+                datetime.now() + timedelta(minutes=random.randint(1, 3))
+            ).replace(second=0, microsecond=0)
+
         resp = await self.update(
             user_id,
             {"is_frozen": True, "frozen_until": until_date},
         )
-        return bool(resp)
-
-    async def finish_the_game(self, user_id: int):
-        resp = await self.update(user_id, {"has_finished": True})
-        return bool(resp)
+        return bool(resp), until_date
 
     async def unlock_user(self, user_id: int):
         resp = await self.update(user_id, {"is_frozen": False})
@@ -118,6 +119,22 @@ class Service:
     async def add_more_rolls(self, user_id: int, count: int = 5):
         resp = await self.update(user_id, {"remaining_rolls": count})
         return bool(resp)
+
+    async def reset_game_params(self, user_id: int):
+        if row := await self.get(user_id):
+            resp = await self.update(
+                user_id,
+                {
+                    "prompt": "",
+                    "start_number": 0,
+                    "dice_numbers": "",
+                    "remaining_rolls": 5,
+                    "is_frozen": False,
+                }
+            )
+            return bool(resp)
+        return None
+
 
     async def get_frozen_users(self) -> list[User]:
         async with self._session_maker() as db:

@@ -12,7 +12,6 @@ class User(BaseModel):
     start_number: int
     dice_numbers: list[int]
     remaining_rolls: int
-    has_finished: bool
     is_frozen: bool
     frozen_until: datetime
     created_at: datetime

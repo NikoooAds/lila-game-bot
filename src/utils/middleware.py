@@ -20,4 +20,4 @@ class FirewallMiddleware(BaseMiddleware):
         if chat.type == ChatType.PRIVATE:
             return await handler(event, data)
         else:
-            logger.info(f"User:{user_id} call bot not in private chat")
+            logger.info(f"User #{user_id} call bot not in private chat")

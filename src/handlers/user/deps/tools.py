@@ -8,6 +8,7 @@ from .board import BOARD, Cell
 
 logger = logging.getLogger("user.tools")
 
+
 async def set_my_commands(bot: Bot, user_id: int):
     try:
         return await bot.set_my_commands(
@@ -107,21 +108,24 @@ def convert_until2str(frozen_until: datetime) -> str:
     now = datetime.now()
 
     time_left = frozen_until - now
+    if time_left.total_seconds() < 0:
+        return "меньше секунды"
+
     text = ""
     days = time_left.days
-    if days:
+    if days and days > 0:
         text += f"{days} дн. "
 
     hours = time_left.seconds // 3600
-    if hours:
+    if hours and hours > 0:
         text += f"{hours:2d} ч. "
 
     minutes = (time_left.seconds % 3600) // 60
-    if minutes:
+    if minutes and minutes > 0:
         text += f"{minutes:2d} мин. "
 
     seconds = time_left.seconds % 60
-    if seconds:
+    if seconds and seconds > 0:
         text += f"{seconds:2d} сек. "
 
     if not text:
