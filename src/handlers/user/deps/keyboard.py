@@ -13,7 +13,7 @@ class Keyboard:
         channel_url = f"https://t.me/{config.target_chat}"
         return InlineKeyboardMarkup(
             inline_keyboard=[
-                [Button(text="Преветственное видео", url=f"{channel_url}/11")],
+                [Button(text="Преветственное видео", url=f"{channel_url}/37")],
                 [Button(text="Канал Проводника", url=channel_url)],
             ]
         )
@@ -38,7 +38,7 @@ class Keyboard:
         )
 
     @staticmethod
-    def link_to_facilitator ():
+    def link_to_facilitator():
         channel_url = f"https://t.me/{config.target_chat}"
         return InlineKeyboardMarkup(
             inline_keyboard=[

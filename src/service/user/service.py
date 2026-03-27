@@ -102,9 +102,8 @@ class Service:
 
     async def lock_user(self, user_id: int, until_date: datetime | None = None):
         if not until_date:
-            until_date = (
-                datetime.now() + timedelta(minutes=random.randint(1, 3))
-            ).replace(second=0, microsecond=0)
+            until_date = (datetime.now() + timedelta(hours=24)) \
+                .replace(second=0, microsecond=0)
 
         resp = await self.update(
             user_id,

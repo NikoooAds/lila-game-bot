@@ -102,32 +102,3 @@ def calculate_user_way(init_number: int, dice_numbers: list[int]) -> str:
                 cell = BOARD[cell.offset]
                 way += f" {m} {cell.number}"
     return way
-
-
-def convert_until2str(frozen_until: datetime) -> str:
-    now = datetime.now()
-
-    time_left = frozen_until - now
-    if time_left.total_seconds() < 0:
-        return "меньше секунды"
-
-    text = ""
-    days = time_left.days
-    if days and days > 0:
-        text += f"{days} дн. "
-
-    hours = time_left.seconds // 3600
-    if hours and hours > 0:
-        text += f"{hours:2d} ч. "
-
-    minutes = (time_left.seconds % 3600) // 60
-    if minutes and minutes > 0:
-        text += f"{minutes:2d} мин. "
-
-    seconds = time_left.seconds % 60
-    if seconds and seconds > 0:
-        text += f"{seconds:2d} сек. "
-
-    if not text:
-        return "меньше секунды"
-    return text

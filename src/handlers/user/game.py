@@ -8,14 +8,14 @@ from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
-from src.service.user import User, UserService
 from src.config import config
+from src.service.user import User, UserService
 from src.utils.logger import ChatLogger
 
 from .deps import BOARD, Cell
 from .deps import Keyboard as K
-from .deps import (Prompt, calculate_cell, calculate_user_way,
-                   convert_until2str, set_my_commands)
+from .deps import Message as M
+from .deps import Prompt, calculate_cell, set_my_commands
 
 logger = logging.getLogger(__name__)
 chat_logger = ChatLogger()
@@ -32,16 +32,11 @@ async def send_card(cb: CallbackQuery, cell: Cell, reply_markup: Any | None = No
 
         user_id = cb.from_user.id
         user = await UserService.get(user_id)
-        way = calculate_user_way(user.start_number, user.dice_numbers)
 
         await cb.message.answer(
             "🎉 Игра пройдена!\n\n"
-            f'Ваш запрос: "{user.prompt}"\n'
-            f"Ваша подсказка через игру лила: {way}\n"
-            "Посмотрите внимательно на картинки, что чувствуете?\n"
-            "Прочитайте описание, есть ли подсказка?\n"
-            "Если хотите обратную связь от проводника нажмите кнопку ниже"
-            "и перешлите это сообщение",
+            f"{M.prompt_and_way(user)}\n\n"
+            f"{M.more_info()}",
             reply_markup=K.link_to_facilitator(),
         )
         is_ok, frozen_until = await UserService.lock_user(user_id)
@@ -56,7 +51,9 @@ async def send_card(cb: CallbackQuery, cell: Cell, reply_markup: Any | None = No
             caption += f"🏹 Стрела. Вы поднимаетесь с {cell.number} в клетку {cell.offset}"
 
     await cb.message.answer_photo(
-        photo=cell.file_id, caption=caption, reply_markup=reply_markup
+        photo=cell.file_id,
+        caption=caption,
+        reply_markup=reply_markup,
     )
 
 
@@ -67,37 +64,8 @@ async def cmd_start(message: Message, state: FSMContext):
     if not user:
         await UserService.create_user(user_id, message.from_user.full_name)
         await set_my_commands(message.bot, user_id)
-        await message.answer(
-            (
-                "Рада приветствовать тебя в <b>Лила-боте</b> 😊\n\n"
-                "❔что умеет этот бот?\n\n"
-                "как только ты отправишь запрос, написав его сообщением боту, начнется твой путь Лила-подсказки с карты\n\n"
-                'дальше ты будешь бросать кубик и "ходить" по полю Лилы '
-                'как будешь "ходить" по полю, в боте ты не увидишь 🫣 '
-                "но все внутри сделано так, что ты будешь ходить по всем правилам Лилы💜\n\n"
-                "что будешь видеть ты? 👀\n\n"
-                "ты будешь видеть карту с номером клетки на которую ты попадаешь, с картинкой и описанием\n\n"
-                "карты с описанием - это детская колода карт Омкара ✨\n"
-                "она очень нежная и бережная, передает сообщение мягко\n\n"
-                "всего у тебя будет <b>5 шагов</b>\n\n"
-                "❕карт возможно будет больше, т.к. на поле могут встречаться стрелы 🏹 и змеи 🐍\n"
-                "❕а может и меньше, т.к. если ты с любого хода попал на 68 клетку\n"
-                "поздравляю🥳 ты точно знаешь ответ на свой вопрос✨\n\n"
-                "после бот выдаст сообщение с пройденным путем💫\n\n"
-                "просмотри еще раз картинки, почитай описание, "
-                "о чем твоя подсказка? 🤓\n\n"
-                "если захочешь комментарий от меня,\n"
-                "можешь отправить сообщение с путем\n"
-                "через кнопку Отправить проводнику\n"
-                "сразу попрошу разрешение отвечать голосовым сообщением,"
-                "так быстрее😉\n\n"
-                "❕бот выдает подсказку 1 раз в неделю, сделан для знакомства с Лилой,  для помощи тебе в волнующих вопросах\n\n"
-                "я всегда буду рада помочь и прокомментировать твой путь🤗\n"
-                "пользуйся🫶"
+        await message.answer(M.hi(), reply_markup=K.hi())
 
-            ),
-            reply_markup=K.hi()
-        )
         await asyncio.sleep(2)
         await message.answer("Введите свой запрос")
         await state.set_state(Prompt.text)
@@ -109,8 +77,8 @@ async def cmd_start(message: Message, state: FSMContext):
             await message.answer("Введи свой запрос")
             return
 
-        if user.remaining_rolls == 0:
-            await message.answer(f"Начать новую игру можно через {convert_until2str(user.frozen_until)}")
+        if user.is_frozen:
+            await message.answer(M.need_wait(user))
         else:
             cell, six_count = calculate_cell(user.start_number, user.dice_numbers)
             await message.answer(
@@ -176,30 +144,16 @@ async def cb_roll_dice(cb: CallbackQuery):
     cell, six_count = BOARD[int(number)], int(six_count)
 
     user_id = cb.from_user.id
-    user = await UserService.get(user_id)
-    if not (user.remaining_rolls > 0):
-        way = calculate_user_way(user.start_number, user.dice_numbers)
-        await cb.message.answer(
-            f'Ваш запрос «{user.prompt}»\n'
-            f"Ваша подсказка через игру лила: {way}\n\n"
-            "Посмотрите внимательно на картинки, что чувствуете?\n\n"
-            "Прочитайте описание, есть ли подсказка?\n\n"
-            "Если хотите обратную связь от проводника нажмите кнопку ниже"
-            "и перешлите это сообщение.",
-            reply_markup=K.link_to_facilitator(),
-        )
-        is_ok, frozen_until = await UserService.lock_user(user_id)
-        logger.info(f"Lock user #{user_id} - {user.full_name!r} until {frozen_until:%d.%m.%y %H:%M:%S}, because spent attemps")
-        return
 
     message = await cb.message.answer_dice(emoji="🎲")
     if not message.dice:
         logger.info(f"Not have dice in message for user:{user_id}")
         return
 
+    dice_number = message.dice.value
+
     await asyncio.sleep(config.dice_delay)
 
-    dice_number = message.dice.value
     await UserService.take_dice(user_id, dice_number)
     if dice_number == 6:
         await cb.message.answer(
@@ -223,23 +177,39 @@ async def cb_roll_dice(cb: CallbackQuery):
                     await send_card(cb, cell)
 
                     await asyncio.sleep(config.card_delay)
+            else:
+                await cb.message.answer("Число <b>6</b> не работает")
+
+    user = await UserService.get(user_id)
+    show_dice_btn = user.remaining_rolls > 0
 
     if cell.number + dice_number > 72:
+        if show_dice_btn:
+            await cb.message.answer(
+                f"Число <b>{dice_number}</b> на кубике не работает, бросайте ещё",
+                reply_markup=K.dice_kb(cell),
+            )
+        else:
+            await cb.message.answer(f"Число <b>{dice_number}</b> на кубике не работает")
+    else:
+        cell = BOARD[cell.number + dice_number]
+        if cell.offset != 0:
+            await send_card(cb, cell)
+
+            cell = BOARD[cell.offset]
+
+            await asyncio.sleep(config.card_delay)
+
+        await send_card(cb, cell, K.dice_kb(cell) if show_dice_btn else None)
+
+    if not show_dice_btn:
         await cb.message.answer(
-            "Это число на кубике не работает, бросайте ещё",
-            reply_markup=K.dice_kb(cell),
+            f"{M.prompt_and_way(user)}\n\n{M.more_info()}",
+            reply_markup=K.link_to_facilitator(),
         )
-        return
-
-    cell = BOARD[cell.number + dice_number]
-    if cell.offset != 0:
-        await send_card(cb, cell)
-
-        cell = BOARD[cell.offset]
-
-        await asyncio.sleep(config.card_delay)
-
-    await send_card(cb, cell, K.dice_kb(cell))
+        is_ok, frozen_until = await UserService.lock_user(user_id)
+        logger.info(f"Lock user #{user_id} - {user.full_name!r} until "
+                    f"{frozen_until:%d.%m.%y %H:%M:%S}, because spent attemps")
 
 
 def router():

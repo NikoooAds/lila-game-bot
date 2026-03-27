@@ -17,6 +17,7 @@ from src.utils.tools import load_env
 
 logger = logging.getLogger(__name__)
 
+
 async def main():
     await UserService.init_db()
 
@@ -39,7 +40,8 @@ async def main():
                         try:
                             await bot.send_message(
                                 user.id,
-                                "Сообщение по поводу повторного прохождения игры",
+                                "Привет! У тебя появилась возможность получить "
+                                "Лила-подсказку, жми кнопку 👇",
                                 reply_markup=UserK.input_prompt(),
                             )
                         except Exception as e:
