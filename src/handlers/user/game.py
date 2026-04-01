@@ -34,7 +34,7 @@ async def send_card(cb: CallbackQuery, cell: Cell, reply_markup: Any | None = No
         user = await UserService.get(user_id)
 
         await cb.message.answer(
-            "🎉 Игра пройдена!\n\n"
+            f"{M.you_win()}\n\n"
             f"{M.prompt_and_way(user)}\n\n"
             f"{M.more_info()}",
             reply_markup=K.link_to_facilitator(),
