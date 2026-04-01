@@ -1,8 +1,8 @@
 [tool.poetry]
 name = "lila-game-bot"
-version = "0.1.0"
+version = "2.0.0"
 description = ""
-authors = ["Nikolay Adamov <nikolay.adamov@servolux.by>"]
+authors = ["Nikolay Adamov <adamov.nikooo@gmail.by>"]
 readme = "README.md"
 package-mode = false
 
