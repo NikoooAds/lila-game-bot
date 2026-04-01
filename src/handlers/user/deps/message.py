@@ -1,6 +1,5 @@
 from datetime import datetime
 
-from src.config import config
 from src.service.user import User
 
 from .tools import calculate_user_way
@@ -39,6 +38,13 @@ class Message:
         )
 
     @staticmethod
+    def you_win():
+        return (
+            "🎉 Ты вышел из игры!\n"
+            "С очень большой долей вероятности ты знаешь ответ на свой вопрос!"
+        )
+
+    @staticmethod
     def prompt_and_way(user: User):
         way = calculate_user_way(user.start_number, user.dice_numbers)
         return (
@@ -53,7 +59,7 @@ class Message:
             "Прочитайте описание, есть ли подсказка?\n\n"
             "Если хотите обратную связь от проводника нажмите кнопку ниже "
             "и перешлите это сообщение\n\n"
-            "Новая игра будет доступна через 24 часа"
+            "Новая подсказка будет доступна через 24 часа"
         )
 
     @staticmethod
