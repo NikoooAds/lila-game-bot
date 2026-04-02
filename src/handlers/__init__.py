@@ -10,6 +10,7 @@ from .user import game
 logger = logging.getLogger(__name__)
 chat_logger = ChatLogger()
 
+
 async def startup():
     logger.info("Started...")
     await chat_logger.info("Let's go! \U0001F680")
@@ -19,7 +20,7 @@ async def shutdown():
     logger.info("...Shutdown")
 
 
-def link(dp: Dispatcher):
+def attach_routers(dp: Dispatcher):
     dp.startup.register(startup)
     dp.shutdown.register(shutdown)
 

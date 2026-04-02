@@ -69,22 +69,30 @@ async def cmd_start(message: Message, state: FSMContext):
         await asyncio.sleep(2)
         await message.answer("Введите свой запрос")
         await state.set_state(Prompt.text)
+        return
+
+    if user.is_frozen:
+        await message.answer(M.need_wait(user))
+        return
+
+    if not user.prompt:
+        await state.set_state(Prompt.text)
+
+    if (st := await state.get_state()) and st.startswith("Prompt"):
+        await message.answer("Введи свой запрос")
+        return
+
+    if user.start_number == 0:
+        await message.answer(
+            f'Ваш запрос «{user.prompt}»\nДальше Вы получите по нему подсказку',
+            reply_markup=K.lets_go(),
+        )
     else:
-        if not user.prompt:
-            await state.set_state(Prompt.text)
-
-        if (st := await state.get_state()) and st.startswith("Prompt"):
-            await message.answer("Введи свой запрос")
-            return
-
-        if user.is_frozen:
-            await message.answer(M.need_wait(user))
-        else:
-            cell, six_count = calculate_cell(user.start_number, user.dice_numbers)
-            await message.answer(
-                "Бросай кубик и продолжай игру",
-                reply_markup=K.dice_kb(cell, six_count),
-            )
+        cell, six_count = calculate_cell(user.start_number, user.dice_numbers)
+        await message.answer(
+            "Бросай кубик и продолжай игру",
+            reply_markup=K.dice_kb(cell, six_count),
+        )
 
 
 async def cb_input_prompt(cb: CallbackQuery, state: FSMContext):
@@ -214,9 +222,18 @@ async def cb_roll_dice(cb: CallbackQuery):
 
 def router():
     router = Router()
-    router.message.register(cmd_start, Command("start"))
-    router.callback_query.register(cb_input_prompt, F.data.endswith("~input_prompt"))
-    router.message.register(parse_input_prompt, Prompt.text)
-    router.callback_query.register(cb_lets_go, F.data.endswith("~lets_go"))
-    router.callback_query.register(cb_roll_dice, F.data.endswith("~dice"))
+
+    for handler, filter in (
+        (cmd_start, Command("start")),
+        (parse_input_prompt, Prompt.text),
+    ):
+        router.message.register(handler, filter)
+
+    for handler, filter in (
+        (cb_input_prompt, F.data.endswith("~input_prompt")),
+        (cb_lets_go, F.data.endswith("~lets_go")),
+        (cb_roll_dice, F.data.endswith("~dice")),
+    ):
+        router.callback_query.register(handler, filter)
+
     return router

@@ -1,4 +1,3 @@
-import random
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta
 
@@ -16,7 +15,6 @@ class Service:
     async def _session_maker(self):
         async with aiosqlite.connect(self.db_path) as db:
             db.row_factory = aiosqlite.Row
-            # await db.execute("PRAGMA foreign_keys = ON")
             yield db
 
     async def init_db(self):
@@ -133,7 +131,6 @@ class Service:
             )
             return bool(resp)
         return None
-
 
     async def get_frozen_users(self) -> list[User]:
         async with self._session_maker() as db:

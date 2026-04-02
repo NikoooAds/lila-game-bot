@@ -8,9 +8,8 @@ from aiogram.client.default import DefaultBotProperties
 from aiogram.enums.parse_mode import ParseMode
 
 from src.config import config
-from src.handlers import link
+from src.handlers import attach_routers
 from src.handlers.user.deps import Keyboard as UserK
-from src.handlers.user.deps import calculate_cell
 from src.service.user import UserService
 from src.utils.middleware import FirewallMiddleware
 from src.utils.tools import load_env
@@ -59,17 +58,15 @@ async def main():
                         f"Reset user:{user.id} game {'success' if is_ok else 'failed'}. Notified: {notified}"
                     )
 
-            logger.info(
-                f"Still locked {len(users) - unlocked_count}-users. "
-                f"Freed: {unlocked_count}"
-            )
+            logger.info(f"Still locked {len(users) - unlocked_count}-users. "
+                        f"Freed: {unlocked_count}")
 
     dp = Dispatcher()
 
     dp.message.outer_middleware(FirewallMiddleware())
     dp.callback_query.outer_middleware(FirewallMiddleware())
 
-    link(dp)
+    attach_routers(dp)
 
     await bot.delete_webhook(drop_pending_updates=True)
     try:
