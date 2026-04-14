@@ -41,7 +41,7 @@ async def send_card(cb: CallbackQuery, cell: Cell, reply_markup: Any | None = No
         )
         is_ok, frozen_until = await UserService.lock_user(user_id)
         logger.info(f"Lock user #{user_id} until {frozen_until:%d.%m.%y %H:%M:%S}, because won")
-        return
+        return True
 
     if cell.offset != 0:
         caption += "\n\n"
@@ -55,6 +55,7 @@ async def send_card(cb: CallbackQuery, cell: Cell, reply_markup: Any | None = No
         caption=caption,
         reply_markup=reply_markup,
     )
+    return False
 
 
 async def cmd_start(message: Message, state: FSMContext):
@@ -177,12 +178,15 @@ async def cb_roll_dice(cb: CallbackQuery):
             if cell.number + 6 <= 72:
                 cell = BOARD[cell.number + 6]
 
-                await send_card(cb, cell)
+                skip = await send_card(cb, cell)
+                if skip: return
+
                 await asyncio.sleep(config.card_delay)
 
                 if cell.offset != 0:
                     cell = BOARD[cell.offset]
-                    await send_card(cb, cell)
+                    skip = await send_card(cb, cell)
+                    if skip: return
 
                     await asyncio.sleep(config.card_delay)
             else:
@@ -202,13 +206,15 @@ async def cb_roll_dice(cb: CallbackQuery):
     else:
         cell = BOARD[cell.number + dice_number]
         if cell.offset != 0:
-            await send_card(cb, cell)
+            skip = await send_card(cb, cell)
+            if skip: return
 
             cell = BOARD[cell.offset]
 
             await asyncio.sleep(config.card_delay)
 
-        await send_card(cb, cell, K.dice_kb(cell) if show_dice_btn else None)
+        skip = await send_card(cb, cell, K.dice_kb(cell) if show_dice_btn else None)
+        if skip: return
 
     if not show_dice_btn:
         await cb.message.answer(
