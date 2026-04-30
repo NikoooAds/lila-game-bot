@@ -1,20 +1,14 @@
-[tool.poetry]
+[project]
 name = "lila-game-bot"
-version = "2.0.0"
-description = ""
-authors = ["Nikolay Adamov <adamov.nikooo@gmail.by>"]
+version = "1.0.0"
+description = "Telegram game"
 readme = "README.md"
-package-mode = false
-
-[tool.poetry.dependencies]
-python = ">=3.12,<3.15"
-python-dotenv = "^1.2.1"
-aiosqlite = "^0.22.1"
-aiogram = "^3.25.0"
-pydantic = "^2.12.5"
-pydantic-settings = "^2.13.1"
-aiocron = "^2.1"
-
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires-python = ">=3.12,<3.15"
+dependencies = [
+    "aiocron>=2.1",
+    "aiogram>=3.27.0",
+    "aiosqlite>=0.22.1",
+    "pydantic>=2.12.5",
+    "pydantic-settings>=2.14.0",
+    "python-dotenv>=1.2.2",
+]

@@ -12,7 +12,6 @@ from src.handlers import attach_routers
 from src.handlers.user.deps import Keyboard as UserK
 from src.service.user import UserService
 from src.utils.middleware import FirewallMiddleware
-from src.utils.tools import load_env
 
 logger = logging.getLogger(__name__)
 
@@ -26,38 +25,43 @@ async def main():
     @aiocron.crontab("*/1 * * * *")
     async def job_1():
         users = await UserService.get_frozen_users()
-        if users:
-            unlocked_count = 0
-            for user in users:
-                if user.is_frozen and user.frozen_until < datetime.now() + timedelta(
-                    seconds=1
-                ):
-                    unlocked_count += 1
-                    is_ok = await UserService.reset_game_params(user.id)
-                    notified = "yes"
-                    for _ in (1, 2, 3):
-                        try:
-                            await bot.send_message(
-                                user.id,
-                                "Привет! У тебя появилась возможность получить "
-                                "Лила-подсказку, жми кнопку 👇",
-                                reply_markup=UserK.input_prompt(),
-                            )
-                        except Exception as e:
-                            logger.error(
-                                f"Notify #{user.id} failed. Retry after 0.15 sec\n{type(e).__name__}: {e}"
-                            )
-                            await asyncio.sleep(0.15)
-                        else:
-                            break
+        if not users:
+            return 
+
+        now = datetime.now()
+        unlocked_count = 0
+        for user in users:
+            if not user.is_frozen:
+                continue
+
+            if user.frozen_until < now + timedelta(seconds=1):
+                unlocked_count += 1
+                is_ok = await UserService.reset_game_params(user.id)
+                notified = "yes"
+                for _ in (1, 2, 3):
+                    try:
+                        await bot.send_message(
+                            user.id,
+                            "Привет! У тебя появилась возможность получить "
+                            "Лила-подсказку, жми кнопку 👇",
+                            reply_markup=UserK.input_prompt(),
+                        )
+                    except Exception as e:
+                        logger.error(
+                            f"Notify #{user.id} failed. Retry after 0.15 sec\n"
+                            f"{type(e).__name__}: {e}"
+                        )
+                        await asyncio.sleep(0.15)
                     else:
-                        logger.error(f"Notify user #{user.id} failed")
-                        notified = "no"
+                        break
+                else:
+                    logger.error(f"Notify user #{user.id} failed")
+                    notified = "no"
 
-                    logger.info(
-                        f"Reset user:{user.id} game {'success' if is_ok else 'failed'}. Notified: {notified}"
-                    )
+                status = 'success' if is_ok else 'failed'
+                logger.info(f"Reset user:{user.id} game {status}. Notified: {notified}")
 
+        if now.hour in [8, 12, 16, 20] and now.minute == 0:
             logger.info(f"Still locked {len(users) - unlocked_count}-users. "
                         f"Freed: {unlocked_count}")
 
@@ -70,7 +74,7 @@ async def main():
 
     await bot.delete_webhook(drop_pending_updates=True)
     try:
-        await dp.start_polling(bot)
+        await dp.start_polling(bot, polling_timeout=60)
     except Exception:
         logger.exception("Pooling")
     finally:
